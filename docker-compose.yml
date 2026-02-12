@@ -1,0 +1,23 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cloudwalk-agent-swarm-api
+    environment:
+      LLM_PROVIDER: ${LLM_PROVIDER:-gemini}
+      EMBEDDING_PROVIDER: ${EMBEDDING_PROVIDER:-gemini}
+      FORCE_REINDEX: ${FORCE_REINDEX:-0}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY}
+      GEMINI_CHAT_MODEL: ${GEMINI_CHAT_MODEL:-gemini-3-flash-preview}
+      GEMINI_EMBED_MODEL: ${GEMINI_EMBED_MODEL:-gemini-embedding-001}
+      SERPER_API_KEY: ${SERPER_API_KEY}
+    ports:
+      - "8000:8000"
+      - "8501:8501"
+    volumes:
+      - chroma_data:/app/chroma_infinitepay_db
+    restart: unless-stopped
+
+volumes:
+  chroma_data:
