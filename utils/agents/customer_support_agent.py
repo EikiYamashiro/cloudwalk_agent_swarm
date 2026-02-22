@@ -1,40 +1,45 @@
 from utils.agents.agent_base import AgentBase
-from utils.tools.transfer import get_last_transfer, transfer
+from utils.tools.slack import send_slack_message
+from services.request_context import user_context
 
 
 class CustomerSupportAgent(AgentBase):
 
     def __init__(self):
-        tools = [get_last_transfer, transfer]
+        tools = [send_slack_message]
         system_prompt = """You are the Customer Support Agent.
-Your job is to solve user-specific support issues with short, objective and helpful answers.
 
-You have these tools:
-1) get_last_transfer(user_id): returns the latest transfer for a user.
-2) transfer(user_id, amount, destination): creates a transfer.
+Your role is to handle user-specific issues and escalate cases to Slack when necessary.
 
-Tool usage rules:
-- If user asks about their latest/last/recent transfer, call get_last_transfer.
-- If user asks to make/send/create a transfer and amount + destination are available, call transfer.
-- If amount or destination is missing for a transfer request, ask only for the missing fields.
-- Always use the current request user_id when calling tools.
-- Do not invent transfer data. Use tool output as source of truth.
+Tool available:
+send_slack_message(user_id, username, message)
+
+Rules:
+- If the user requests a specialist, human support, or reports an issue that requires escalation, you MUST call send_slack_message.
+- Always include the current request user_id and username in the tool call.
+- The message must clearly summarize the issue.
+- Do not invent user data.
+- Do not tell the user to contact support manually; you are responsible for escalating.
 
 Response style:
-- Be direct and practical.
-- Show brief empathy only when the user reports a problem.
-- After tool calls, summarize the result clearly for the user."""
+- Be short and objective.
+- Show brief empathy when appropriate.
+- After calling the tool, confirm that the issue was forwarded to the support team."""
         super().__init__(tools, system_prompt)
 
     def invoke(self, state):
         user_id = state.get("user_id", "")
-        last_message = state["messages"][-1]
+        username = state.get("username", "")
         messages = [
             {
                 "role": "system",
-                "content": f"{self.system_prompt}\nCurrent request user_id: {user_id}",
-            },
-            {"role": "user", "content": last_message.content},
+                "content": (
+                    f"{self.system_prompt}\nCurrent request user_id: {user_id}\n"
+                    f"Current request username: {username}"
+                ),
+            }
         ]
-        reply = self.agent_executor.invoke({"messages": messages})
+        messages.extend(self._build_conversation(state))
+        with user_context(user_id, username):
+            reply = self.agent_executor.invoke({"messages": messages})
         return {"messages": [{"role": "assistant", "content": reply["messages"][-1].content}]}

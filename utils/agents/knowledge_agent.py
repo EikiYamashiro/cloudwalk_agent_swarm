@@ -16,7 +16,15 @@ class KnowledgeAgent(AgentBase):
         self.rag_llm = get_chat_model()
 
     def invoke(self, state: State):
-        question = state["messages"][-1].content
+        conversation = self._build_conversation(state, limit=8)
+        if not conversation:
+            return {"messages": [{"role": "assistant", "content": "Please send a question."}]}
+
+        question = conversation[-1]["content"]
+        history_lines = [
+            f"{item['role']}: {item['content']}" for item in conversation[:-1]
+        ]
+        history = "\n".join(history_lines) if history_lines else "No previous messages."
         min_relevance = 0.52
         vectorstore = getattr(retriever, "vectorstore", None)
 
@@ -34,7 +42,12 @@ class KnowledgeAgent(AgentBase):
             prompt = ChatPromptTemplate.from_template(
                 """
 Use only the retrieved InfinitePay context to answer the question.
-Respond in the same language used by the user.
+Answer in English by default.
+If the user explicitly writes in another language, answer in that language.
+Use the recent chat history when the question references previous messages.
+
+Recent chat history:
+{history}
 
 Context:
 {context}
@@ -44,14 +57,19 @@ Question:
 """
             )
             answer = (prompt | self.rag_llm | StrOutputParser()).invoke(
-                {"context": context, "question": question}
+                {"history": history, "context": context, "question": question}
             )
         else:
             web_context = google_web_search.invoke({"question": question})
             prompt = ChatPromptTemplate.from_template(
                 """
 Use the web search results to answer the user question objectively.
-Respond in the same language used by the user.
+Answer in English by default.
+If the user explicitly writes in another language, answer in that language.
+Use the recent chat history when the question references previous messages.
+
+Recent chat history:
+{history}
 
 Web results:
 {web_context}
@@ -61,7 +79,7 @@ Question:
 """
             )
             answer = (prompt | self.rag_llm | StrOutputParser()).invoke(
-                {"web_context": web_context, "question": question}
+                {"history": history, "web_context": web_context, "question": question}
             )
 
         return {"messages": [{"role": "assistant", "content": answer}]}

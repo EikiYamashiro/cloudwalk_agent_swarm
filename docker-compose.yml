@@ -1,4 +1,22 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: cloudwalk-agent-swarm-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cloudwalk}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-cloudwalk}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
   api:
     build:
       context: .
@@ -12,12 +30,33 @@ services:
       GEMINI_CHAT_MODEL: ${GEMINI_CHAT_MODEL:-gemini-3-flash-preview}
       GEMINI_EMBED_MODEL: ${GEMINI_EMBED_MODEL:-gemini-embedding-001}
       SERPER_API_KEY: ${SERPER_API_KEY}
+      SLACK_WEBHOOK_URL: ${SLACK_WEBHOOK_URL:-}
+      MAX_INPUT_CHARS: ${MAX_INPUT_CHARS:-2000}
+      MAX_TRANSFER_AMOUNT: ${MAX_TRANSFER_AMOUNT:-20000}
+      DATABASE_URL: ${DATABASE_URL:-postgresql://postgres:postgres@postgres:5432/cloudwalk}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:5173}
     ports:
       - "8000:8000"
-      - "8501:8501"
+    depends_on:
+      postgres:
+        condition: service_healthy
     volumes:
       - chroma_data:/app/chroma_infinitepay_db
     restart: unless-stopped
 
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend-react/Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8000}
+    container_name: cloudwalk-agent-swarm-frontend
+    ports:
+      - "5173:80"
+    depends_on:
+      - api
+    restart: unless-stopped
+
 volumes:
   chroma_data:
+  postgres_data:
