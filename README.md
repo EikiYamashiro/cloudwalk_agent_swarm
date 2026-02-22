@@ -69,5 +69,5 @@ docker compose up --build
 - `chroma_infinitepay_db/`: stores the persisted data from the local vector database (Chroma).
 
 ## Youtube
-[![Watch the video](https://img.youtube.com/vi/XHrRF0wb1CE/maxresdefault.jpg)](https://www.youtube.com/watch?v=NEvvx8k-4Ew)
-https://www.youtube.com/watch?v=XHrRF0wb1CE
+[![Watch the video](https://img.youtube.com/vi/NEvvx8k-4Ew/maxresdefault.jpg)](https://www.youtube.com/watch?v=NEvvx8k-4Ew)
+https://www.youtube.com/watch?v=NEvvx8k-4Ew
