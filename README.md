@@ -100,7 +100,6 @@ docker compose up --build
 Current automated tests are unit tests focused on deterministic logic:
 
 - Guardrail input and transfer validation (`tests/test_guardrail_service.py`).
-- Customer support tools behavior and response formatting (`tests/test_customer_support_tools.py`).
 
 Run tests with:
 
