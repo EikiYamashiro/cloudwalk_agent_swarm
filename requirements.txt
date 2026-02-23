@@ -15,3 +15,4 @@ langchain-mcp-adapters
 pandas
 mcp[cli]
 langchain-text-splitters
+matplotlib>=3.8.0

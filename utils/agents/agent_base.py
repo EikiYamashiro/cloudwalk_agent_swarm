@@ -10,8 +10,6 @@ class State(TypedDict):
     messages: Annotated[list, add_messages]
     message_type: str | None
     next: str | None
-    user_id: str | None
-    username: str | None
     safety_decision: str | None
     safety_category: str | None
     blocked_reason: str | None

@@ -21,10 +21,10 @@ def validate_input_message(message: str) -> tuple[bool, str | None]:
     return False, None
 
 
-def validate_transfer_payload(amount: float, destination: str) -> tuple[bool, str | None]:
-    clean_destination = _normalize_text(destination)
-    if not clean_destination:
-        return True, "Destination is required."
+def validate_transfer_payload(amount: float, counterparty_name: str) -> tuple[bool, str | None]:
+    clean_counterparty_name = _normalize_text(counterparty_name)
+    if not clean_counterparty_name:
+        return True, "Counterparty name is required."
 
     if amount <= 0:
         return True, "Transfer amount must be greater than zero."

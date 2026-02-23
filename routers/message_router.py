@@ -4,7 +4,6 @@ from pydantic import BaseModel, Field
 
 from services.agent_service import get_answer
 from services.store_service import get_customer_by_user_id, get_or_create_customer, list_transfers
-from utils.tools.slack import send_slack_message as send_slack_tool
 
 router = APIRouter()
 
@@ -40,16 +39,16 @@ class LoginResponse(BaseModel):
     username: str
 
 
-class SlackRequest(BaseModel):
-    user_id: str
-    message: str = Field(..., min_length=1, max_length=2000)
-
-
 @router.post("/message", response_model=MessageResponse)
 def message(payload: MessageRequest) -> MessageResponse:
-    if not get_customer_by_user_id(payload.user_id):
+    customer = get_customer_by_user_id(payload.user_id)
+    if not customer:
         raise HTTPException(status_code=404, detail="User not found.")
-    response_content = get_answer(payload.message, payload.user_id)
+    response_content = get_answer(
+        user_input=payload.message,
+        user_id=customer["user_id"],
+        username=customer["username"],
+    )
     return MessageResponse(response=response_content)
 
 

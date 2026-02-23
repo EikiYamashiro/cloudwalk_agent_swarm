@@ -1,6 +1,33 @@
 # Cloudwalk Agent Swarm
 
-## Mandatory configuration
+## Solution architecture
+Architecture diagram file: `img/cloudwalk_architecture.drawio.png`
+
+![Cloudwalk solution architecture](img/cloudwalk_architecture.drawio.png)
+
+### Customer Support Agent tools
+
+The Customer Support Agent uses 2 tools:
+
+- `get_customer_support_snapshot()`: reads customer profile and recent activity in a single diagnostic tool.
+- `send_slack_message(message)`: escalates to human support using the current request user context.
+
+### Knowledge Agent tools
+
+The Knowledge Agent uses retrieval and web search:
+
+- `retriever` + `format_context(...)`: retrieves and formats relevant InfinitePay context from the vector database (RAG path).
+- `google_web_search(question)`: fallback for general questions when relevant RAG context is not found.
+
+### Transfer Agent tools
+
+The Transfer Agent uses 3 tools:
+
+- `get_last_transfer()`: returns the latest transfer from the current request user.
+- `get_transfers_from_user()`: returns the full transfer history from the current request user.
+- `transfer(amount, counterparty_name)`: creates a new transfer for the current request user.
+
+## Configuration
 
 Before starting the project, replace the API keys with your own valid values:
 
@@ -67,6 +94,58 @@ docker compose up --build
 - `utils/`: groups utilities, agents, factories, and supporting tools for the main flow.
 - `frontend-react/`: React application (Vite + Nginx container).
 - `chroma_infinitepay_db/`: stores the persisted data from the local vector database (Chroma).
+
+## Testing
+
+Current automated tests are unit tests focused on deterministic logic:
+
+- Guardrail input and transfer validation (`tests/test_guardrail_service.py`).
+- Customer support tools behavior and response formatting (`tests/test_customer_support_tools.py`).
+
+Run tests with:
+
+```bash
+pytest tests -q
+```
+
+## Integration testing strategy
+
+For broader confidence in the swarm, the next step is integration tests with Docker Compose:
+
+1. Start API + Postgres in an isolated test environment.
+2. Seed test customers and transfers in Postgres.
+3. Call `/message` scenarios end-to-end and assert routing outcomes:
+   - knowledge requests -> Knowledge Agent path
+   - support incidents -> Customer Support path + Slack tool mock
+   - transfer requests -> Transfer Agent path + database write/read
+4. Mock external dependencies (`SERPER`, Slack webhook, LLM provider) to keep tests deterministic and fast.
+
+## Router Agent evaluation
+
+Latest confusion matrix:
+
+![Router Agent confusion matrix](tests/results/router_agent_confusion_matrix_20260223_013302.png)
+
+Latest metrics:
+
+```json
+{
+  "metrics": {
+    "accuracy": 0.9565217391304348,
+    "precision": 0.9642857142857143,
+    "recall": 0.9642857142857143,
+    "f1_score": 0.9615384615384615,
+    "labels": [
+      "knowledge",
+      "transfer",
+      "customer_support",
+      "block"
+    ]
+  },
+  "total_cases": 23,
+  "total_errors": 1
+}
+```
 
 ## Youtube
 [![Watch the video](https://img.youtube.com/vi/XHrRF0wb1CE/maxresdefault.jpg)](https://www.youtube.com/watch?v=XHrRF0wb1CE)
